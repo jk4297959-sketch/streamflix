@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StreamFlix</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#141414;color:#fff;font-family:sans-serif}
+  header{padding:14px;background:#000;position:sticky;top:0;z-index:5}
+  header h1{color:#e50914;font-size:22px;margin-bottom:8px}
+  #search{width:100%;padding:10px;border-radius:6px;border:none;font-size:16px}
+  h2{margin:16px 12px 8px;font-size:18px}
+  .row{display:flex;overflow-x:auto;gap:10px;padding:0 12px}
+  .card{flex:0 0 150px;cursor:pointer}
+  .card img{width:150px;height:90px;object-fit:cover;border-radius:6px;background:#333}
+  .card p{font-size:13px;margin-top:4px}
+  #player{display:none;position:fixed;inset:0;background:#000;z-index:10;flex-direction:column}
+  #player video{width:100%;max-height:70vh}
+  #player button{margin:12px;padding:10px;background:#e50914;color:#fff;border:none;border-radius:6px;font-size:16px}
+  #ptitle{padding:12px;font-size:18px}
+</style>
+</head>
+<body>
+<header>
+  <h1>StreamFlix</h1>
+  <input id="search" placeholder="ভিডিও খুঁজুন...">
+</header>
+
+<div id="continue"></div>
+<h2>সব ভিডিও</h2>
+<div class="row" id="all"></div>
+
+<div id="player">
+  <button onclick="closePlayer()">← ফিরে যান</button>
+  <video id="vid" controls playsinline></video>
+  <div id="ptitle"></div>
+</div>
+
+<script>
+const base = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/";
+const videos = [
+  {id:1, title:"Big Buck Bunny", file:"BigBuckBunny.mp4", img:"images/BigBuckBunny.jpg"},
+  {id:2, title:"Sintel", file:"Sintel.mp4", img:"images/Sintel.jpg"},
+  {id:3, title:"Elephants Dream", file:"ElephantsDream.mp4", img:"images/ElephantsDream.jpg"},
+  {id:4, title:"Tears of Steel", file:"TearsOfSteel.mp4", img:"images/TearsOfSteel.jpg"}
+];
+
+const vid = document.getElementById("vid");
+let current = null;
+
+function getProgress(){ try{return JSON.parse(localStorage.getItem("progress")||"{}")}catch(e){return {}} }
+
+function cardHTML(v){
+  return `<div class="card" onclick="play(${v.id})">
+    <img src="${base+v.img}" alt=""><p>${v.title}</p></div>`;
+}
+
+function render(list){
+  document.getElementById("all").innerHTML = list.map(cardHTML).join("");
+  const p = getProgress();
+  const cont = videos.filter(v => p[v.id] > 5);
+  document.getElementById("continue").innerHTML = cont.length
+    ? `<h2>দেখা চালিয়ে যান</h2><div class="row">${cont.map(cardHTML).join("")}</div>` : "";
+}
+
+function play(id){
+  current = videos.find(v => v.id === id);
+  vid.src = base + current.file;
+  vid.currentTime = 0;
+  const t = getProgress()[id];
+  if(t) vid.addEventListener("loadedmetadata", () => vid.currentTime = t, {once:true});
+  document.getElementById("ptitle").textContent = current.title;
+  document.getElementById("player").style.display = "flex";
+  vid.play();
+}
+
+function closePlayer(){
+  vid.pause();
+  document.getElementById("player").style.display = "none";
+  render(videos);
+}
+
+vid.addEventListener("timeupdate", () => {
+  if(!current) return;
+  const p = getProgress();
+  p[current.id] = vid.currentTime;
+  localStorage.setItem("progress", JSON.stringify(p));
+});
+
+document.getElementById("search").addEventListener("input", e => {
+  const q = e.target.value.toLowerCase();
+  render(videos.filter(v => v.title.toLowerCase().includes(q)));
+});
+
+render(videos);
+</script>
+</body>
+</html>
